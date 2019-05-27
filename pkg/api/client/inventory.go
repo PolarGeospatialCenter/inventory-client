@@ -112,3 +112,7 @@ func (i *InventoryApi) Network() *Network {
 func (i *InventoryApi) System() *System {
 	return &System{Inventory: i}
 }
+
+func (i *InventoryApi) IPAM() *IPAM {
+	return &IPAM{Inventory: i}
+}
