@@ -55,10 +55,10 @@ func TestIPReservationGetByMAC(t *testing.T) {
 		t.Errorf("unable to get ip reservation: %v", err)
 	}
 
-	if reservation.MAC.String() != "00:01:02:03:04:05" {
+	if reservation[0].MAC.String() != "00:01:02:03:04:05" {
 		t.Errorf("mac address doesn't match expected value")
 	}
-	if reservation.Start != nil {
+	if reservation[0].Start != nil {
 		t.Errorf("expected nil start time")
 	}
 }
