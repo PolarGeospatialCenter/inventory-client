@@ -36,6 +36,33 @@ func TestIPReservationGet(t *testing.T) {
 	}
 }
 
+func TestIPReservationGetByMAC(t *testing.T) {
+	gock.DisableNetworking()
+	defer gock.EnableNetworking()
+	defer gock.Off()
+	testBaseUrl, _ := url.Parse("https://inventory.api.local/v0/")
+
+	gock.New(testBaseUrl.String()).
+		Get("ipam/ip").
+		MatchParam("mac", "00:01:02:03:04:05").
+		Reply(http.StatusOK).
+		BodyString(`[{"mac": "00:01:02:03:04:05","ip": "10.0.0.1/24","start": null,"end": null}]`)
+
+	mac, _ := net.ParseMAC("00:01:02:03:04:05")
+	reservation, err := NewInventoryApi(testBaseUrl, &aws.Config{Credentials: credentials.NewStaticCredentials("id", "secret", "token")}).
+		IPAM().GetIPReservationsByMAC(mac)
+	if err != nil {
+		t.Errorf("unable to get ip reservation: %v", err)
+	}
+
+	if reservation.MAC.String() != "00:01:02:03:04:05" {
+		t.Errorf("mac address doesn't match expected value")
+	}
+	if reservation.Start != nil {
+		t.Errorf("expected nil start time")
+	}
+}
+
 func TestIPReservationCreateSpecifiedIP(t *testing.T) {
 	gock.DisableNetworking()
 	defer gock.EnableNetworking()

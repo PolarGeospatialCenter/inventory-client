@@ -24,6 +24,20 @@ func (i *IPAM) GetIPReservation(ip net.IP) (*types.IPReservation, error) {
 	return reservation, err
 }
 
+func (i *IPAM) GetIPReservationsByMAC(mac net.HardwareAddr) (*types.IPReservation, error) {
+	client := NewRestClient(i.Inventory.AwsConfigs...)
+
+	url := i.Inventory.Url(fmt.Sprintf("/ipam/ip?mac=%s", mac.String()))
+
+	response, err := client.Client().NewRequest().Execute(http.MethodGet, url)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get ip reservation: %v", err)
+	}
+	reservations := &types.IPReservationList{}
+	err = UnmarshalApiResponse(response, reservations)
+	return reservations, err
+}
+
 func (i *IPAM) UpdateIPReservation(modified *types.IPReservation) (*types.IPReservation, error) {
 	client := NewRestClient(i.Inventory.AwsConfigs...)
 
