@@ -49,6 +49,10 @@ func (i *IPAM) UpdateIPReservation(modified *types.IPReservation) (*types.IPRese
 		return nil, fmt.Errorf("unable to get ip reservation: %v", err)
 	}
 
+	if response.StatusCode() == http.StatusConflict {
+		return nil, ErrConflict
+	}
+
 	reservation := &types.IPReservation{}
 	err = UnmarshalApiResponse(response, reservation)
 	return reservation, err
@@ -79,6 +83,10 @@ func (i *IPAM) CreateIPReservation(new *types.IpamIpRequest, ip net.IP) (*types.
 	response, err := request.Execute(http.MethodPost, i.Inventory.Url(url))
 	if err != nil {
 		return nil, fmt.Errorf("unable to create ip reservation: %v", err)
+	}
+
+	if response.StatusCode() == http.StatusConflict {
+		return nil, ErrConflict
 	}
 
 	reservation := &types.IPReservation{}

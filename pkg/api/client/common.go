@@ -2,10 +2,15 @@ package client
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/PolarGeospatialCenter/inventory/pkg/lambdautils"
 	"gopkg.in/resty.v1"
+)
+
+var (
+	ErrConflict = errors.New("conflict")
 )
 
 func UnmarshalApiResponse(r *resty.Response, obj interface{}) error {
