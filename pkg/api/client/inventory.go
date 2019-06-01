@@ -16,6 +16,49 @@ type InventoryApi struct {
 	BaseUrl    *url.URL
 }
 
+type InventoryApiConfig struct {
+	BaseURL string
+	Aws     Aws
+}
+
+type Aws struct {
+	Region    string
+	VaultRole string `mapstructure:"vault_role"`
+	Profile   string
+}
+
+// NewInventoryApiFromConfig returns a new inventory API from the config passed in.
+func NewInventoryApiFromConfig(cfg *InventoryApiConfig) (*InventoryApi, error) {
+
+	baseURL, err := url.Parse(cfg.BaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse base url: %v", err)
+	}
+
+	awsConfig := &aws.Config{}
+	awsConfig.WithRegion(cfg.Aws.Region)
+
+	if vaultRole := cfg.Aws.VaultRole; vaultRole != "" {
+		vaultClient, err := vaulthelper.NewClient(vault.DefaultConfig())
+		if err != nil {
+			return nil, fmt.Errorf("unable to connect to vault: %v", err)
+		}
+		credProvider := &vaulthelper.VaultAwsStsCredentials{
+			VaultClient: vaultClient,
+			VaultRole:   vaultRole,
+		}
+		awsConfig.WithCredentials(credentials.NewCredentials(credProvider))
+	}
+
+	if awsProfile := cfg.Aws.Profile; awsProfile != "" {
+		awsConfig.WithCredentials(credentials.NewSharedCredentials("", awsProfile))
+	}
+
+	return NewInventoryApi(baseURL, awsConfig), nil
+
+}
+
+// NewInventoryApiDefaultConfig returns an InventoryApi based on config read by viper
 func NewInventoryApiDefaultConfig(profile string) (*InventoryApi, error) {
 	if profile == "" {
 		profile = "default"
@@ -30,31 +73,14 @@ func NewInventoryApiDefaultConfig(profile string) (*InventoryApi, error) {
 		return nil, fmt.Errorf("error reading ~/.inventory/default.yml configuration file: %v", err)
 	}
 
-	baseUrl, err := url.Parse(cfg.GetString("baseurl"))
+	inventoryConfig := &InventoryApiConfig{}
+
+	err = cfg.Unmarshal(inventoryConfig)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse base url: %v", err)
+		return nil, fmt.Errorf("error unmarshaling InventoryApiConfig: %v", err)
 	}
 
-	awsConfig := &aws.Config{}
-	awsConfig.WithRegion(cfg.GetString("aws.region"))
-
-	if vault_role := cfg.GetString("aws.vault_role"); vault_role != "" {
-		vaultClient, err := vaulthelper.NewClient(vault.DefaultConfig())
-		if err != nil {
-			return nil, fmt.Errorf("unable to connect to vault: %v", err)
-		}
-		credProvider := &vaulthelper.VaultAwsStsCredentials{
-			VaultClient: vaultClient,
-			VaultRole:   vault_role,
-		}
-		awsConfig.WithCredentials(credentials.NewCredentials(credProvider))
-	}
-
-	if awsProfile := cfg.GetString("aws.profile"); awsProfile != "" {
-		awsConfig.WithCredentials(credentials.NewSharedCredentials("", awsProfile))
-	}
-
-	return NewInventoryApi(baseUrl, awsConfig), nil
+	return NewInventoryApiFromConfig(inventoryConfig)
 
 }
 
