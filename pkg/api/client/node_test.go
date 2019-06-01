@@ -20,7 +20,7 @@ func TestNodeGet(t *testing.T) {
 	gock.New(testBaseUrl.String()).
 		Get("node/test-000").
 		Reply(http.StatusOK).
-		BodyString(`{"InventoryID": "test-000"}`)
+		BodyString(`{"InventoryID": "test-000","Networks":{"testnet":{"nics":["00:01:02:03:04:05"]}}}`)
 
 	node, err := NewInventoryApi(testBaseUrl, &aws.Config{Credentials: credentials.NewStaticCredentials("id", "secret", "token")}).Node().Get("test-000")
 	if err != nil {
@@ -29,6 +29,10 @@ func TestNodeGet(t *testing.T) {
 
 	if node.ID() != "test-000" {
 		t.Errorf("got wrong inventory id: %s", node.ID())
+	}
+
+	if node.Networks["testnet"].NICs[0].String() != "00:01:02:03:04:05" {
+		t.Errorf("mac not unmarshaled correctly")
 	}
 }
 
